@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Área Administrador</title>
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css"/>
+  <link rel="stylesheet" href="css/styless.css">
+</head>
+<body>
+  <h1>Área Administrador</h1>
+  <button id="btn-logout" style="float:right; margin-top:10px;">Cerrar sesión</button>
+
+  <input type="radio" name="tab" id="tab1" checked>
+  <input type="radio" name="tab" id="tab2">
+  <input type="radio" name="tab" id="tab3">
+
+  <div class="tabs">
+    <label for="tab1">Gestionar Usuarios</label>
+    <label for="tab2">Herramientas</label>
+    <label for="tab3">Reportes</label>
+  </div>
+
+  <div class="content">
+    <!--  USUARIOS  -->
+    <section id="content1">
+      <h2>Usuarios</h2>
+
+      <form class="card" id="frm-usuario" onsubmit="return false;">
+        <fieldset>
+          <legend>Crear un nuevo usuario</legend>
+
+          <label for="nuevoUsuario">Nombre Usuario</label>
+          <input type="text" id="nuevoUsuario" placeholder="Ingresar usuario">
+
+          <label for="correo">Correo</label>
+          <input type="email" id="correo" placeholder="Ingresar correo">
+
+          <label for="pass">Contraseña</label>
+          <input type="password" id="pass" placeholder="Ingresar contraseña">
+
+          <div class="btn-row">
+            <button type="button" id="btn-crear-usuario" disabled title="(Pendiente de API)">Registrar Usuario</button>
+            <button type="reset" class="ghost">Limpiar</button>
+          </div>
+          
+        <label for="rol_id">Rol</label>
+        <select id="rol_id" title="Rol del usuario"></select>
+
+        <label style="display:inline-flex;gap:6px;align-items:center">
+          <input type="checkbox" id="u_activo" checked>
+          Activo
+        </label>
+
+        </fieldset>
+      </form>
+
+      <h3>Listado de usuarios</h3>
+      <div class="table-wrap">
+        <table id="tbl-usuarios">
+          <thead>
+            <tr>
+              <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!--  HERRAMIENTAS  -->
+    <section id="content2">
+      <h2>Herramientas</h2>
+
+      <div class="kpis grid-3">
+        <div class="card"><strong>Disponibles:</strong> <span id="kpi-disponibles">0</span></div>
+        <div class="card"><strong>En uso:</strong> <span id="kpi-uso">0</span></div>
+        <div class="card"><strong>En mantención:</strong> <span id="kpi-mant">0</span></div>
+      </div>
+
+      <div class="subtabs">
+        <input type="radio" name="subtab-tools" id="st1" checked>
+        <input type="radio" name="subtab-tools" id="st2">
+        <input type="radio" name="subtab-tools" id="st3">
+        <input type="radio" name="subtab-tools" id="st4">
+        
+        <div class="subtab-panels">
+          <!-- CREAR -->
+          <div class="subpanel" id="sp1">
+            <form class="card" id="frm-nueva">
+              <fieldset>
+                <legend>Crear herramienta</legend>
+
+                <!-- Si el backend exige categoría, dejamos un hidden por defecto -->
+                <input type="hidden" id="categoria_id" name="categoria_id" value="1">
+
+                <label for="codigo">Código</label>
+                <input type="text" id="codigo" name="codigo" placeholder="Ej: TL-DRL-001" required>
+
+                <label for="nombre">Nombre</label>
+                <input type="text" id="nombre" name="nombre" placeholder="Ej: Taladro" required>
+
+                <label for="descripcion">Descripción</label>
+                <input type="text" id="descripcion" name="descripcion" placeholder="Ej: Taladro eléctrico 600W">
+
+                <!-- Ubicación eliminada -->
+
+                <label for="valor_estimado">Valor estimado</label>
+                <input type="number" step="0.01" id="valor_estimado" name="valor_estimado" placeholder="Ej: 95000">
+
+                <div class="btn-row">
+                  <button type="submit">Guardar</button>
+                  <button type="reset" class="ghost">Limpiar</button>
+                </div>
+              </fieldset>
+            </form>
+          </div>
+
+          <!-- LISTAR -->
+          <div class="subpanel" id="sp2">
+            <fieldset class="card">
+              <legend>Filtro</legend>
+              <div class="grid-3">
+                <label>
+                  <span>Buscar</span>
+                  <input type="search" id="f_q" placeholder="Código o Nombre">
+                </label>
+                <label>
+                  <span>Estado</span>
+                  <select id="f_estado">
+                    <option value="">(Todos)</option>
+                    <option value="DISPONIBLE">DISPONIBLE</option>
+                    <option value="NO_DISPONIBLE">NO_DISPONIBLE</option>
+                    <option value="MANTENCION">MANTENCION</option>
+                    <option value="DAÑADA">DAÑADA</option>
+                    <option value="BAJA">BAJA</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Categoría</span>
+                  <input type="number" id="f_cat" placeholder="ID (opcional)">
+                </label>
+              </div>
+              <div class="btn-row">
+                <button type="button" id="btn-filtrar">Aplicar</button>
+                <button type="button" class="ghost" onclick="document.getElementById('f_q').value='';document.getElementById('f_estado').value='';">Limpiar filtros</button>
+              </div>
+            </fieldset>
+
+            <div class="table-wrap">
+              <table id="tbl-herr">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th>Estado</th>
+                    
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          
+          
+    </section>
+
+    <!--REPORTES -->
+    <section id="content3">
+      <h2>Reportes</h2>
+
+      <div class="subtabs">
+        <input type="radio" name="subtab-rep" id="rp1" checked>
+        <input type="radio" name="subtab-rep" id="rp2">
+        <input type="radio" name="subtab-rep" id="rp3">
+
+        <div class="subtab-labels">
+          <label for="rp1">Asistencias</label>
+          <label for="rp2">Herramientas</label>
+          <label for="rp3">Consolidado</label>
+        </div>
+
+        <div class="subtab-panels">
+          <div class="subpanel" id="rp-1">
+            <fieldset class="card">
+              <legend>Parámetros</legend>
+              <div class="grid-3">
+                <label>
+                  <span>Desde</span>
+                  <input type="date" id="r_desde">
+                </label>
+                <label>
+                  <span>Hasta</span>
+                  <input type="date" id="r_hasta">
+                </label>
+                <label>
+                  <span>Usuario</span>
+                  <input type="text" id="r_usuario" placeholder="Opcional">
+                </label>
+              </div>
+              <div class="btn-row">
+                <button type="button" id="btn-rep-asist">Generar vista previa</button>
+                
+              </div>
+            </fieldset>
+
+            <div class="table-wrap">
+              <table id="tbl-rep-asist">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
+                    <th>Horas</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="subpanel" id="rp-2">
+            <fieldset class="card">
+              <legend>Parámetros</legend>
+              <div class="grid-3">
+                <label>
+                  <span>Mes</span>
+                  <input type="month" id="r_mes">
+                </label>
+                <label>
+                  <span>Estado</span>
+                  <select id="r_estado">
+                    <option value="">(Todos)</option>
+                    <option value="DISPONIBLE">DISPONIBLE</option>
+                    <option value="NO_DISPONIBLE">NO_DISPONIBLE</option>
+                    <option value="MANTENCION">MANTENCION</option>
+                    <option value="DAÑADA">DAÑADA</option>
+                    <option value="BAJA">BAJA</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Categoría</span>
+                  <input type="number" id="r_categoria" placeholder="ID (opcional)">
+                </label>
+              </div>
+              <div class="btn-row">
+                <button type="button" id="btn-rep-herr">Generar vista previa</button>
+               
+              </div>
+            </fieldset>
+
+            <div class="table-wrap">
+              <table id="tbl-rep-herr">
+                <thead>
+                  <tr>
+                    <th>Herramienta</th>
+                    <th>Uso (veces)</th>
+                    <th>Horas uso</th>
+                    <th>Incidencias</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="subpanel" id="rp-3">
+            <fieldset class="card">
+              <legend>Parámetros</legend>
+              <div class="grid-3">
+                <label>
+                  <span>Periodo</span>
+                  <select id="r_periodo">
+                    <option value="semanal">Semanal</option>
+                    <option value="mensual">Mensual</option>
+                    <option value="trimestral">Trimestral</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Área</span>
+                  <select id="r_area">
+                    <option value="">Todas</option>
+                    <option value="capataz">Capataz</option>
+                    <option value="operaciones">Operaciones</option>
+                    <option value="administracion">Administración</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Formato</span>
+                  <select id="r_formato">
+                    <option value="tabla">Tabla</option>
+                    <option value="resumen">Resumen</option>
+                  </select>
+                </label>
+              </div>
+            </fieldset>
+
+            <div class="table-wrap">
+              <table id="tbl-rep-cons">
+                <thead>
+                  <tr>
+                    <th>Métrica</th>
+                    <th>Valor</th>
+                    <th>Observación</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div> 
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <style>
+    #st1:checked ~ .subtab-panels #sp1,
+    #st2:checked ~ .subtab-panels #sp2,
+    #st3:checked ~ .subtab-panels #sp3,
+    #st4:checked ~ .subtab-panels #sp4 { display:block; }
+
+    #rp1:checked ~ .subtab-panels #rp-1,
+    #rp2:checked ~ .subtab-panels #rp-2,
+    #rp3:checked ~ .subtab-panels #rp-3 { display:block; }
+  </style>
+
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+  <script src="/js/admin.js"></script>
+  <script src="/js/admin_usuarios.js"></script>
+
+  <!-- Modal mejorado para cambiar estado de herramienta en Admin -->
+  <div id="modalEstadoAdmin" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; flex-direction: column;">
+    <div style="background: white; padding: 40px; border-radius: 12px; max-width: 600px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); animation: slideDown 0.3s ease-out;">
+      <h2 style="margin: 0 0 10px 0; color: #333; text-align: center;">Cambiar Estado de Herramienta</h2>
+      <p id="modalEstadoAdminNombre" style="font-weight: bold; margin: 0 0 30px 0; text-align: center; color: #666; font-size: 16px;"></p>
+      
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 15px; border: 2px solid #ddd; border-radius: 8px; transition: all 0.3s; background: #f9f9f9;">
+          <input type="radio" name="nuevoEstadoAdmin" value="DISPONIBLE" style="cursor: pointer; width: 18px; height: 18px;">
+          <div>
+            <span style="color: #4CAF50; font-weight: bold; display: block;">● DISPONIBLE</span>
+            <small style="color: #999;">Lista para usar</small>
+          </div>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 15px; border: 2px solid #ddd; border-radius: 8px; transition: all 0.3s; background: #f9f9f9;">
+          <input type="radio" name="nuevoEstadoAdmin" value="NO_DISPONIBLE" style="cursor: pointer; width: 18px; height: 18px;">
+          <div>
+            <span style="color: #FF9800; font-weight: bold; display: block;">● NO DISPONIBLE</span>
+            <small style="color: #999;">En uso actualmente</small>
+          </div>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 15px; border: 2px solid #ddd; border-radius: 8px; transition: all 0.3s; background: #f9f9f9;">
+          <input type="radio" name="nuevoEstadoAdmin" value="MANTENCION" style="cursor: pointer; width: 18px; height: 18px;">
+          <div>
+            <span style="color: #2196F3; font-weight: bold; display: block;">● MANTENCIÓN</span>
+            <small style="color: #999;">En reparación</small>
+          </div>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 15px; border: 2px solid #ddd; border-radius: 8px; transition: all 0.3s; background: #f9f9f9;">
+          <input type="radio" name="nuevoEstadoAdmin" value="DAÑADA" style="cursor: pointer; width: 18px; height: 18px;">
+          <div>
+            <span style="color: #F44336; font-weight: bold; display: block;">● DAÑADA</span>
+            <small style="color: #999;">No funciona</small>
+          </div>
+        </label>
+        <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 15px; border: 2px solid #ddd; border-radius: 8px; transition: all 0.3s; background: #f9f9f9; grid-column: 1 / -1;">
+          <input type="radio" name="nuevoEstadoAdmin" value="BAJA" style="cursor: pointer; width: 18px; height: 18px;">
+          <div>
+            <span style="color: #9C27B0; font-weight: bold; display: block;">● BAJA</span>
+            <small style="color: #999;">Descartada del inventario</small>
+          </div>
+        </label>
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: flex-end; border-top: 1px solid #eee; padding-top: 20px;">
+        <button id="btnCancelarEstadoAdmin" style="padding: 10px 24px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.3s;">Cancelar</button>
+        <button id="btnConfirmarEstadoAdmin" style="padding: 10px 24px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background 0.3s;">Aceptar cambio</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes slideDown {
+      from {
+        transform: translateY(-50px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    #modalEstadoAdmin label:hover {
+      background: #f0f8ff;
+      border-color: #2196F3;
+    }
+
+    #btnConfirmarEstadoAdmin:hover {
+      background: #45a049;
+    }
+
+    #btnCancelarEstadoAdmin:hover {
+      background: #e0e0e0;
+    }
+  </style>
+
+  <script>
+  $(document).ready(function() {
+    const config = {
+      dom: 'Bfrtip',
+      buttons: [
+        { extend: 'excelHtml5', text: ' Exportar Excel' },
+        { extend: 'pdfHtml5', text: ' Exportar PDF' },
+        { extend: 'print', text: ' Imprimir' }
+      ],
+      language: {
+        url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-ES.json'
+      }
+    };
+
+    if ($('#tbl-rep-asist').length) $('#tbl-rep-asist').DataTable(config);
+    if ($('#tbl-rep-herr').length) $('#tbl-rep-herr').DataTable(config);
+    if ($('#tbl-rep-cons').length) $('#tbl-rep-cons').DataTable(config);
+  });
+  </script>
+</body>
+</html>

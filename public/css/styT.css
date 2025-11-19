@@ -1,0 +1,98 @@
+/* 🎨 Estilo base */
+body {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  background: #fff;
+  color: #222;
+}
+
+/* 🔘 Ocultamos los radios (aunque solo hay una pestaña, se deja por compatibilidad futura) */
+input[type="radio"] {
+  display: none;
+}
+
+/* 🗂️ Contenedor de pestañas */
+.tabs {
+  display: flex;
+  border-bottom: 2px solid #ccc;
+  margin-bottom: 10px;
+}
+
+.tabs label {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+  background: #f5f5f5;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  transition: background 0.3s;
+}
+
+.tabs label:hover {
+  background: #e0e0e0;
+}
+
+/* 📄 Panel principal */
+.content section {
+  display: block; /* Siempre visible, ya que solo hay una pestaña */
+  padding: 15px;
+  border: 1px solid #ccc;
+  background: #fff;
+}
+
+/* 📆 Inputs y botones */
+input[type="datetime-local"] {
+  padding: 5px;
+  margin-right: 10px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+}
+
+button {
+  padding: 6px 12px;
+  margin: 5px 3px;
+  border: 1px solid #999;
+  border-radius: 4px;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background-color: #e0e0e0;
+}
+
+button:disabled {
+  background-color: #ddd;
+  cursor: not-allowed;
+}
+
+/* 📊 Tabla */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+table, th, td {
+  border: 1px solid #999;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+th {
+  background-color: #f0f0f0;
+  font-weight: bold;
+}
+
+/* 🧭 Encabezados */
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+h2 {
+  text-align: center;
+  margin-top: 0;
+}
