@@ -2,16 +2,7 @@
   const form   = document.getElementById('loginForm');
   const email  = document.getElementById('email');
   const pass   = document.getElementById('password');
-  const msgBox = document.getElementById('loginMsg');
-
-  //Mostrar mensajes en pantalla
-  const setMsg = (txt, ok = false) => {
-    if (!msgBox) return;
-    msgBox.textContent = txt;
-    msgBox.className = ok ? 'text-success mt-3' : 'text-danger mt-3';
-  };
-
-  //Enviar formulario de login
+// Manejar el evento submit del formulario 
   async function onSubmit(e) {
     e.preventDefault();
 
@@ -20,13 +11,17 @@
         email: (email.value || '').trim().toLowerCase(),
         password: (pass.value || '').trim()
       };
-
+      //valida campos incompletos
       if (!payload.email || !payload.password) {
-        setMsg('Completa email y contraseña');
+        Swal.fire({
+          icon: 'warning',
+          title: 'Campos incompletos',
+          text: 'Ingresa tu email y contraseña.',
+          confirmButtonColor: '#d33'
+        });
         return;
       }
-
-      // Petición al backend
+      // Enviar solicitud de login al backend
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -34,7 +29,7 @@
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || 'Error de login');
+      if (!res.ok) throw new Error(data?.error || 'Credenciales incorrectas');
 
       //Guardar token y datos del usuario logueado
       localStorage.setItem('jwt', data.token);
@@ -45,7 +40,14 @@
         rol: data.rol || data.usuario?.rol
       }));
 
-      setMsg('Ingreso correcto ', true);
+      // Mensaje ingreso correcto
+      await Swal.fire({
+        icon: 'success',
+        title: 'Bienvenido',
+        text: 'Ingreso correcto.',
+        timer: 1200,
+        showConfirmButton: false
+      });
 
       // redirigir segun rol
       const rol = (data.rol || data.usuario?.rol || '').toLowerCase();
@@ -56,7 +58,19 @@
 
     } catch (err) {
       console.error('Error en login:', err);
-      setMsg(err.message || 'Error de servidor');
+
+      // ALERTA LOGIN FALLIDO
+      Swal.fire({
+        icon: 'error',
+        title: 'Acceso denegado',
+        text: err.message || 'Credenciales incorrectas.',
+        confirmButtonText: 'Reintentar',
+        confirmButtonColor: '#d33',
+        backdrop: 'rgba(0,0,0,0.4)',
+        showClass: {
+          popup: 'animate__animated animate__shakeX'
+        }
+      });
     }
   }
 
