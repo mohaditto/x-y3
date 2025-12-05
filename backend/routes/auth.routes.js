@@ -5,7 +5,7 @@ import { pool } from "../db.js";
 
 const r = Router();
 
-// LOGIN
+// login de usuario y generación de token JWT
 r.post("/login", async (req, res) => {
   try {
     let { email, password } = req.body || {};
@@ -30,18 +30,20 @@ r.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
+    //esto es cuando el administrador desactiva la cuenta
     const user = rows[0];
     if (!user.activo) {
       return res.status(403).json({ error: "Usuario inactivo" });
     }
 
-    // Verificar contraseña
+    // verifica la contraseña
     const ok = await bcrypt.compare(password, user.password_hash || "");
     if (!ok) {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
-    // Crear token JWT
+    // Crear token JWT , para que el usuario pueda autenticarse en futuras solicitudes , incluye id, rol, nombre y email , por ejemplo funciones como requireAuth y requireAdmin
+    
     const token = jwt.sign(
       {
         id: user.id,
@@ -53,7 +55,7 @@ r.post("/login", async (req, res) => {
       { expiresIn: process.env.JWT_EXPIRES || "8h" }
     );
 
-    // DEVOLVER también el ID y el rol (para el frontend)
+    // DEVOLVER tambien el ID y el rol (para el frontend) por futuros usos por ejemplo para mostrar u ocultar opciones en el menú
     res.json({
       ok: true,
       id: user.id,
@@ -69,3 +71,5 @@ r.post("/login", async (req, res) => {
 });
 
 export default r;
+
+
