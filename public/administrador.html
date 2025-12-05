@@ -39,6 +39,7 @@
       grid-template-columns: var(--sidebar-width) 1fr;
       height: 100vh;
     }
+    
 
     /* SIDEBAR */
     .sidebar {
@@ -466,6 +467,57 @@
       </div>
     </div>
   </div>
+
+  <div class="modal fade" id="modalEditarUsuario" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Editar Usuario</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form id="formEditarUsuario">
+        <div class="modal-body">
+
+          <input type="hidden" id="edit_user_id">
+
+          <div class="mb-3">
+            <label class="form-label">Nombre</label>
+            <input type="text" id="edit_user_nombre" class="form-control">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Correo</label>
+            <input type="email" id="edit_user_email" class="form-control">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Rol</label>
+            <select id="edit_user_rol" class="form-select"></select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Estado</label>
+            <select id="edit_user_activo" class="form-select">
+              <option value="1">Activo</option>
+              <option value="0">Inactivo</option>
+            </select>
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-primary" type="submit">Guardar Cambios</button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+
   
   <style>@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }</style>
 
@@ -479,6 +531,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
   <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
   
   <script src="/js/admin.js"></script>
   <script src="/js/admin_usuarios.js"></script>
