@@ -7,9 +7,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (!inputBuscar || !tablaBodyHerr) return;
 
-  
-  // Función de mensajes flotantes
-  
+
+  // funcion de mensajes flotantes
+
   function showMessage(msg, type = "info") {
     const box = document.createElement("div");
     box.textContent = msg;
@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let seleccionadas = [];
   let herramientaSeleccionadaId = null;
 
-  // Función para obtener color según estado
+  // funcion para obtener color según estado
   function getColorPorEstado(estado) {
     const colores = {
       'DISPONIBLE': '#4CAF50',
@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Confirmar cambio de estado
   document.getElementById("btnConfirmarEstado").addEventListener("click", async () => {
     const nuevoEstado = document.querySelector('input[name="nuevoEstado"]:checked')?.value;
-    
+
     if (!nuevoEstado) {
       showMessage("Seleccione un estado válido", "error");
       return;
@@ -74,7 +74,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showMessage("Error: Herramienta no identificada", "error");
       return;
     }
-
+    //peticion al backend para cambiar estado
     try {
       const resp = await fetch(`/api/capataz/herramientas/estado/${herramientaSeleccionadaId}`, {
         method: "PUT",
@@ -97,9 +97,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  
+
   // Cargar trabajadores en <select>
-  
   async function cargarTrabajadores() {
     try {
       const resp = await fetch("/api/capataz/trabajadores");
@@ -120,21 +119,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  
+
   // Cargar herramientas dañadas
-  
+
   async function cargarHerramientasDañadas() {
     try {
+      // Solicitar herramientas dañadas al backend
       const resp = await fetch("/api/capataz/herramientas/danadas");
       const herramientasDañadas = await resp.json();
-      
+
       const alertaDañadas = document.getElementById("alertaDañadas");
       const listaDañadas = document.getElementById("listaDañadas");
-      
+
       if (herramientasDañadas.length > 0) {
         alertaDañadas.style.display = "block";
         alertaDañadas.classList.remove("d-none");
-        
+
+        // Mostrar la lista de herramientas dañadas
         listaDañadas.innerHTML = herramientasDañadas.map(h => `
           <div style="padding: 8px; border-left: 3px solid #f44336; margin-bottom: 8px; background: #fff3cd;">
             <strong>${h.nombre}</strong> (${h.codigo}) - <span style="color: #d32f2f; font-weight: bold;">${h.estado}</span>
@@ -152,14 +153,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Cargar herramientas
-  
+
   async function cargarHerramientas() {
     try {
       const resp = await fetch("/api/capataz/herramientas");
       herramientas = await resp.json();
       mostrarHerramientas(herramientas);
-      
-      // También cargar herramientas dañadas
+
+      // tambien cargar herramientas dañadas
       await cargarHerramientasDañadas();
     } catch (error) {
       console.error(error);
@@ -167,21 +168,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  
+
   // Mostrar herramientas en tabla
-  
   function mostrarHerramientas(lista) {
     tablaBodyHerr.innerHTML = "";
     seleccionadas = [];
 
+    // Manejar caso sin herramientas
     lista.forEach((h) => {
       const fila = document.createElement("tr");
       const colorEstado = getColorPorEstado(h.estado);
       fila.innerHTML = `
         <td>
-          <input type="checkbox" class="checkHerr" data-id="${h.id}" ${
-        h.estado === "DISPONIBLE" ? "" : "disabled"
-      }>
+          <input type="checkbox" class="checkHerr" data-id="${h.id}" ${h.estado === "DISPONIBLE" ? "" : "disabled"
+        }>
           ${h.nombre}
         </td>
         <td>${h.descripcion || "-"}</td>
@@ -212,9 +212,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  
+
   // Buscar herramientas por nombre
-  
   btnBuscar.addEventListener("click", () => {
     const termino = inputBuscar.value.toLowerCase();
     const filtradas = herramientas.filter((h) =>
@@ -223,7 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
     mostrarHerramientas(filtradas);
   });
 
-  
+
   // Registrar prestamo
   btnPrestar.addEventListener("click", async () => {
     const trabajador_id = trabajadorSelect.value;
@@ -243,6 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnPrestar.disabled = true;
     btnPrestar.textContent = "Prestando...";
 
+    // Enviar solicitud al backend
     try {
       const resp = await fetch("/api/capataz/herramientas/prestar", {
         method: "POST",
@@ -258,13 +258,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (resp.ok) {
         showMessage(data.message, "success");
+        if (resp.ok) {
+          showMessage(data.message, "success");
+
+          seleccionadas = [];
+          await cargarHerramientas();
+
+          // Actualizar historial si la funcion está definida(typeof cargarHistorial === "function")
+          if (typeof cargarHistorial === "function") {
+            await cargarHistorial();
+          }
+        }
+
+
         seleccionadas = [];
         await cargarHerramientas();
       } else {
-        // Si hay herramientas dañadas, mostrar el error con más detalle
+        // Si hay herramientas dañadas, mostrar el error 
         if (data.herramientas_danadas && data.herramientas_danadas.length > 0) {
           const herramiientasList = data.herramientas_danadas.map(h => `${h.nombre} (${h.estado})`).join(", ");
-          showMessage(`❌ No se pueden prestar herramientas dañadas: ${herramiientasList}`, "error");
+          showMessage(` No se pueden prestar herramientas dañadas: ${herramiientasList}`, "error");
         } else {
           showMessage(data.message || "Error al registrar préstamo", "error");
         }
@@ -275,24 +288,25 @@ document.addEventListener("DOMContentLoaded", () => {
     } finally {
       btnPrestar.disabled = false;
       btnPrestar.textContent = "Prestar herramienta";
+
     }
   });
 
-  
-  // Inicialización
+
+  // inicializacion
   cargarTrabajadores();
   cargarHerramientas();
 
+
   // Conectar SSE (EventSource) y escuchar cambios en herramientas para sincronizar
-  try{
-    if (typeof EventSource !== 'undefined'){
+  try {
+    if (typeof EventSource !== 'undefined') {
       const es = new EventSource('/sse');
-      es.addEventListener('herramienta:estado', async () => { await cargarHerramientas(); });
-      es.addEventListener('herramienta:created', async () => { await cargarHerramientas(); });
+      es.addEventListener('herramienta:estado', async () => { await cargarHerramientas(); });      
       es.addEventListener('herramienta:updated', async () => { await cargarHerramientas(); });
       es.addEventListener('herramienta:deleted', async () => { await cargarHerramientas(); });
       es.addEventListener('prestamo:created', async () => { await cargarHerramientas(); });
     }
-  }catch(e){ console.warn('SSE capataz init failed', e); }
+  } catch (e) { console.warn('SSE capataz init failed', e); }
 
 });
