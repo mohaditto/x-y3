@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (resp.ok) {
         const fila = document.createElement("tr");
-
+        //crear html de la fila con los datos recibidos
         fila.innerHTML = `
           <td data-fecha="${data.fecha}">${formatearFecha(data.fecha)}</td>
           <td>${data.hora_entrada}</td>
@@ -160,12 +160,13 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       const data = await resp.json();
-
+      // Actualizar la tabla si la respuesta es exitosa
       if (resp.ok) {
         const filaHoy = [...tablaBody.querySelectorAll("tr")].find(f => {
           return f.querySelector("td").dataset.fecha === hoy;
         });
 
+        // Actualizar hora de salida en la fila correspondiente (slice para mostrar HH:MM)
         if (filaHoy) {
           filaHoy.querySelector("td:last-child").textContent = data.hora_salida.slice(0, 5);
         }
