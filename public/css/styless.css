@@ -28,6 +28,12 @@
   justify-content: center;
 }
 
+.badge {
+    --bs-badge-color: #000 !important;   /* texto negro */
+    color: #000 !important;
+}
+
+
 /* Efecto al pasar el mouse (se levantan un poco) */
 #tbl-usuarios td:last-child button:hover {
   transform: translateY(-3px);
@@ -110,4 +116,4 @@
 #tbl-usuarios td:last-child button:nth-child(3):hover::after { content: "Activar/Desactivar"; }
 #tbl-usuarios td:last-child button:nth-child(4):hover::after { content: "Eliminar"; }
 
-@keyframes fadeInTooltip { to { opacity: 1; } }
+@keyframes fadeInTooltip { to { opacity: 1; } 
