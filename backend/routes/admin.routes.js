@@ -5,11 +5,10 @@ import { requireAuth, requireAdmin } from "../middleware/auth.js";
 
 const r = Router();
 
-const ESTADOS_VALIDOS = ["DISPONIBLE","NO_DISPONIBLE","MANTENCION","DAÑADA","BAJA"];
-const isEmpty = v => v === undefined || v === null || (typeof v === "string" && v.trim()==="");
+const ESTADOS_VALIDOS = ["DISPONIBLE", "NO_DISPONIBLE", "MANTENCION", "DAÑADA", "BAJA"];
+const isEmpty = v => v === undefined || v === null || (typeof v === "string" && v.trim() === "");
 
-// Debug
-
+// Debug son para listar las rutas disponibles en este router
 r.get("/__debug", requireAuth, requireAdmin, (_req, res) => {
   res.json({
     ok: true,
@@ -37,9 +36,8 @@ r.get("/__debug", requireAuth, requireAdmin, (_req, res) => {
   });
 });
 
- 
-// Dashboard
- 
+
+// Dashboard 
 r.get("/reportes/dashboard", requireAuth, requireAdmin, async (_req, res) => {
   const [[kpis]] = await pool.query(`
     SELECT
@@ -54,9 +52,8 @@ r.get("/reportes/dashboard", requireAuth, requireAdmin, async (_req, res) => {
   res.json({ ok: true, kpis: kpis || {} });
 });
 
- 
-// Categorías
- 
+
+// Categorias de herramientas
 r.get("/categorias", requireAuth, requireAdmin, async (_req, res) => {
   const [rows] = await pool.query(`
     SELECT id, nombre, slug, activa
@@ -67,9 +64,8 @@ r.get("/categorias", requireAuth, requireAdmin, async (_req, res) => {
   res.json({ ok: true, data: rows });
 });
 
- 
-// Herramientas
 
+//obtiene listas de herramientas con su estado 
 r.get("/herramientas", requireAuth, requireAdmin, async (req, res) => {
   const { estado = "", q = null, categoria_id = "" } = req.query;
 
@@ -102,6 +98,7 @@ r.get("/herramientas", requireAuth, requireAdmin, async (req, res) => {
   res.json({ ok: true, data: rows });
 });
 
+//crear nueva herramienta
 r.post("/herramientas", requireAuth, requireAdmin, async (req, res) => {
   try {
     const {
@@ -115,10 +112,10 @@ r.post("/herramientas", requireAuth, requireAdmin, async (req, res) => {
     } = req.body;
 
     if (!categoria_id || !codigo || !nombre) {
-      return res.status(400).json({ ok:false, error: "Faltan campos obligatorios: categoria_id, codigo, nombre." });
+      return res.status(400).json({ ok: false, error: "Faltan campos obligatorios: categoria_id, codigo, nombre." });
     }
     if (!ESTADOS_VALIDOS.includes(estado)) {
-      return res.status(400).json({ ok:false, error: "Estado inválido." });
+      return res.status(400).json({ ok: false, error: "Estado inválido." });
     }
 
     const [result] = await pool.query(
@@ -135,33 +132,33 @@ r.post("/herramientas", requireAuth, requireAdmin, async (req, res) => {
       [result.insertId]
     );
 
-  // Emitir evento en tiempo real (SSE)
-  try{ const b = req.app.locals.broadcast; if(b) b('herramienta:created', row); }catch(_){ }
-  res.status(201).json({ ok: true, data: row });
+    // Emitir evento en tiempo real (SSE)
+    try { const b = req.app.locals.broadcast; if (b) b('herramienta:created', row); } catch (_) { }
+    res.status(201).json({ ok: true, data: row });
   } catch (e) {
     if (e?.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ ok:false, error: "El código ya existe. Debe ser único." });
+      return res.status(409).json({ ok: false, error: "El código ya existe. Debe ser único." });
     }
     console.error("POST /herramientas error:", e);
-    res.status(500).json({ ok:false, error: "No se pudo crear la herramienta." });
+    res.status(500).json({ ok: false, error: "No se pudo crear la herramienta." });
   }
 });
 
-// Actualizar SOLO código, nombre y categoría
+// Actualizar solo codigo, nombre atravez de patch
 r.patch("/herramientas/:id", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { codigo, nombre, categoria_id } = req.body;
 
     if (!codigo && !nombre && !categoria_id) {
-      return res.status(400).json({ ok:false, error: "Debes enviar al menos un campo (codigo, nombre o categoria_id)." });
+      return res.status(400).json({ ok: false, error: "Debes enviar al menos un campo (codigo, nombre o categoria_id)." });
     }
 
     const campos = [];
     const valores = [];
 
-    if (codigo)       { campos.push("codigo = ?");       valores.push(codigo); }
-    if (nombre)       { campos.push("nombre = ?");       valores.push(nombre); }
+    if (codigo) { campos.push("codigo = ?"); valores.push(codigo); }
+    if (nombre) { campos.push("nombre = ?"); valores.push(nombre); }
     if (categoria_id) { campos.push("categoria_id = ?"); valores.push(Number(categoria_id)); }
 
     valores.push(id);
@@ -172,7 +169,7 @@ r.patch("/herramientas/:id", requireAuth, requireAdmin, async (req, res) => {
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ ok:false, error: "Herramienta no encontrada." });
+      return res.status(404).json({ ok: false, error: "Herramienta no encontrada." });
     }
 
     const [[row]] = await pool.query(`
@@ -182,49 +179,76 @@ r.patch("/herramientas/:id", requireAuth, requireAdmin, async (req, res) => {
    LEFT JOIN categorias_herramienta c ON c.id=h.categoria_id
        WHERE h.id=?`, [id]);
 
-  try{ const b = req.app.locals.broadcast; if(b) b('herramienta:updated', row); }catch(_){ }
-  res.json({ ok:true, data: row });
+    try { const b = req.app.locals.broadcast; if (b) b('herramienta:updated', row); } catch (_) { }
+    res.json({ ok: true, data: row });
   } catch (e) {
     if (e?.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ ok:false, error: "El código ya existe. Debe ser único." });
+      return res.status(409).json({ ok: false, error: "El código ya existe. Debe ser único." });
     }
     console.error("PATCH /herramientas/:id error:", e);
-    res.status(500).json({ ok:false, error: "No se pudo actualizar la herramienta." });
+    res.status(500).json({ ok: false, error: "No se pudo actualizar la herramienta." });
   }
 });
 
+// Obtener una herramienta por ID 
+r.get("/herramientas/:id", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [[row]] = await pool.query(
+      `SELECT h.id, h.codigo, h.nombre, h.descripcion, h.categoria_id, h.estado,
+              c.nombre AS categoria
+         FROM herramientas h
+    LEFT JOIN categorias_herramienta c ON c.id = h.categoria_id
+        WHERE h.id = ?`,
+      [id]
+    );
+
+    if (!row) {
+      return res.status(404).json({ ok: false, error: "Herramienta no encontrada." });
+    }
+
+    res.json({ ok: true, data: row });
+
+  } catch (e) {
+    console.error("GET /herramientas/:id error:", e);
+    res.status(500).json({ ok: false, error: "No se pudo obtener la herramienta." });
+  }
+});
+
+// Cambiar estado de herramienta atravez igual mente de patch
 r.patch("/herramientas/:id/estado", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { estado, detalle = null } = req.body;
 
     if (!ESTADOS_VALIDOS.includes(estado)) {
-      return res.status(400).json({ ok:false, error: "Estado inválido." });
+      return res.status(400).json({ ok: false, error: "Estado inválido." });
     }
 
     const [[prev]] = await pool.query(`SELECT estado FROM herramientas WHERE id=?`, [id]);
-    if (!prev) return res.status(404).json({ ok:false, error: "Herramienta no encontrada." });
+    if (!prev) return res.status(404).json({ ok: false, error: "Herramienta no encontrada." });
 
     const [upd] = await pool.query(
       `UPDATE herramientas SET estado=? WHERE id=?`,
       [estado, id]
     );
     if (upd.affectedRows === 0) {
-      return res.status(404).json({ ok:false, error: "Herramienta no encontrada." });
+      return res.status(404).json({ ok: false, error: "Herramienta no encontrada." });
     }
 
-    // (simple) registrar movimiento si la tabla existe
+    //registrar movimiento si la tabla existe
     try {
       let tipo = "AJUSTE";
       if (estado === "MANTENCION") tipo = "MANTENCION";
-      if (estado === "BAJA")       tipo = "BAJA";
+      if (estado === "BAJA") tipo = "BAJA";
 
       await pool.query(
         `INSERT INTO movimientos_herramienta(herramienta_id, tipo, ref_tabla, ref_id, creado_por, detalle)
          VALUES(?, ?, NULL, NULL, ?, ?)`,
         [id, tipo, (req.user?.id ?? 0), detalle || `Cambio de ${prev.estado} a ${estado}`]
       );
-    } catch (_) { /* silencioso si no existe la tabla */ }
+    } catch (_) {  }
 
     const [[row]] = await pool.query(
       `SELECT h.*, c.nombre AS categoria
@@ -234,52 +258,52 @@ r.patch("/herramientas/:id/estado", requireAuth, requireAdmin, async (req, res) 
       [id]
     );
 
-  try{ const b = req.app.locals.broadcast; if(b) b('herramienta:estado', row); }catch(_){ }
-  res.json({ ok:true, data: row });
+    try { const b = req.app.locals.broadcast; if (b) b('herramienta:estado', row); } catch (_) { }
+    res.json({ ok: true, data: row });
   } catch (e) {
     console.error("PATCH /herramientas/:id/estado error:", e);
-    res.status(500).json({ ok:false, error: "No se pudo cambiar el estado." });
+    res.status(500).json({ ok: false, error: "No se pudo cambiar el estado." });
   }
 });
 
+//eliminar herramienta 
 r.delete("/herramientas/:id", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const [result] = await pool.query(`DELETE FROM herramientas WHERE id=?`, [id]);
     if (result.affectedRows === 0) {
-      return res.status(404).json({ ok:false, error: "No encontrada" });
+      return res.status(404).json({ ok: false, error: "No encontrada" });
     }
-  try{ const b = req.app.locals.broadcast; if(b) b('herramienta:deleted', { id: Number(id) }); }catch(_){ }
-  res.json({ ok: true });
+    try { const b = req.app.locals.broadcast; if (b) b('herramienta:deleted', { id: Number(id) }); } catch (_) { }
+    res.json({ ok: true });
   } catch (e) {
     console.error("DELETE /herramientas/:id", e);
-    res.status(500).json({ ok:false, error: "No se pudo eliminar (revisar referencias o usar BAJA lógica)." });
+    res.status(500).json({ ok: false, error: "No se pudo eliminar (revisar referencias o usar BAJA lógica)." });
   }
 });
 
- 
-// Roles
- 
+
+// obtener roles
 r.get("/roles", requireAuth, requireAdmin, async (_req, res) => {
   const [rows] = await pool.query(`SELECT id, nombre FROM roles ORDER BY nombre`);
-  res.json({ ok:true, data: rows });
+  res.json({ ok: true, data: rows });
 });
 
 
 // Usuarios
 
-// helper: verificar rol
-async function assertRolExists(rol_id){
-  if(!rol_id) return;
+// verifica que el rol exista
+async function assertRolExists(rol_id) {
+  if (!rol_id) return;
   const [[r0]] = await pool.query(`SELECT id FROM roles WHERE id=?`, [rol_id]);
-  if(!r0){
+  if (!r0) {
     const e = new Error("ROL_NOT_FOUND");
     e.code = "ROL_NOT_FOUND";
     throw e;
   }
 }
 
-// Listar usuarios (con filtros opcionales)
+// Listar usuarios con filtros
 r.get("/usuarios", requireAuth, requireAdmin, async (req, res) => {
   const { q = "", rol_id = "", activo = "" } = req.query;
 
@@ -307,24 +331,26 @@ r.get("/usuarios", requireAuth, requireAdmin, async (req, res) => {
      ORDER BY u.nombre
   `, params);
 
-  res.json({ ok:true, data: rows });
+  res.json({ ok: true, data: rows });
 });
 
 // Crear usuario
 r.post("/usuarios", requireAuth, requireAdmin, async (req, res) => {
-  try{
+  try {
     const { nombre, email, password, rol_id, activo = 1 } = req.body;
-    if(!nombre || !email || !password || !rol_id){
-      return res.status(400).json({ ok:false, error: "Faltan campos: nombre, email, password, rol_id" });
+    if (!nombre || !email || !password || !rol_id) {
+      return res.status(400).json({ ok: false, error: "Faltan campos: nombre, email, password, rol_id" });
     }
-
+    
+    // utiliza el verificar rol de arriba
     await assertRolExists(rol_id);
+    // hashea la contraseña
     const hash = await bcrypt.hash(String(password), 10);
 
     const [ins] = await pool.query(`
       INSERT INTO usuarios(nombre, email, password_hash, rol_id, activo)
       VALUES (?,?,?,?,?)`,
-      [nombre.trim(), email.trim().toLowerCase(), hash, Number(rol_id), Number(activo)?1:0]
+      [nombre.trim(), email.trim().toLowerCase(), hash, Number(rol_id), Number(activo) ? 1 : 0]
     );
 
     const [[row]] = await pool.query(`
@@ -333,123 +359,127 @@ r.post("/usuarios", requireAuth, requireAdmin, async (req, res) => {
        WHERE u.id=?`, [ins.insertId]
     );
 
-    res.status(201).json({ ok:true, data: row });
-  }catch(e){
+    res.status(201).json({ ok: true, data: row });
+  } catch (e) {
     if (e?.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ ok:false, error: "El email ya está registrado." });
+      return res.status(409).json({ ok: false, error: "El email ya está registrado." });
     }
     if (e?.code === "ROL_NOT_FOUND") {
-      return res.status(400).json({ ok:false, error: "El rol indicado no existe." });
+      return res.status(400).json({ ok: false, error: "El rol indicado no existe." });
     }
     console.error("POST /usuarios error:", e);
-    res.status(500).json({ ok:false, error: "No se pudo crear el usuario." });
+    res.status(500).json({ ok: false, error: "No se pudo crear el usuario." });
   }
 });
 
 // Editar usuario (nombre, email, rol_id, activo)
 r.patch("/usuarios/:id", requireAuth, requireAdmin, async (req, res) => {
-  try{
+  try {
     const { id } = req.params;
     const { nombre, email, rol_id, activo } = req.body;
-
+    
+    // prevenir que el admin se desactive a si mismo
     if (Number(id) === Number(req.user?.id) && (activo === 0 || activo === false)) {
-      return res.status(400).json({ ok:false, error: "No puedes desactivarte a ti mismo." });
+      return res.status(400).json({ ok: false, error: "No puedes desactivarte a ti mismo." });
     }
 
+    // construir query dinamicamente
     const campos = [];
     const vals = [];
 
     if (nombre && !isEmpty(nombre)) { campos.push("nombre=?"); vals.push(nombre.trim()); }
-    if (email && !isEmpty(email))   { campos.push("email=?");  vals.push(email.trim().toLowerCase()); }
+    if (email && !isEmpty(email)) { campos.push("email=?"); vals.push(email.trim().toLowerCase()); }
     if (rol_id) {
       await assertRolExists(rol_id);
       campos.push("rol_id=?"); vals.push(Number(rol_id));
     }
-    if (activo !== undefined) { campos.push("activo=?"); vals.push(Number(activo)?1:0); }
+    if (activo !== undefined) { campos.push("activo=?"); vals.push(Number(activo) ? 1 : 0); }
 
-    if (campos.length === 0) return res.status(400).json({ ok:false, error: "No hay campos para actualizar." });
+    if (campos.length === 0) return res.status(400).json({ ok: false, error: "No hay campos para actualizar." });
 
+    // ejecutar update (vals.push) es para añadir mas de uno o mas elementos
     vals.push(id);
     const [upd] = await pool.query(`UPDATE usuarios SET ${campos.join(", ")} WHERE id=?`, vals);
-    if (upd.affectedRows === 0) return res.status(404).json({ ok:false, error: "Usuario no encontrado." });
+    if (upd.affectedRows === 0) return res.status(404).json({ ok: false, error: "Usuario no encontrado." });
+
 
     const [[row]] = await pool.query(`
       SELECT u.id, u.nombre, u.email, u.rol_id, u.activo, r.nombre AS rol
         FROM usuarios u JOIN roles r ON r.id=u.rol_id
        WHERE u.id=?`, [id]
     );
-    res.json({ ok:true, data: row });
-  }catch(e){
+    res.json({ ok: true, data: row });
+  } catch (e) {
     if (e?.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({ ok:false, error: "El email ya está registrado." });
+      return res.status(409).json({ ok: false, error: "El email ya está registrado." });
     }
     if (e?.code === "ROL_NOT_FOUND") {
-      return res.status(400).json({ ok:false, error: "El rol indicado no existe." });
+      return res.status(400).json({ ok: false, error: "El rol indicado no existe." });
     }
     console.error("PATCH /usuarios/:id error:", e);
-    res.status(500).json({ ok:false, error: "No se pudo actualizar el usuario." });
+    res.status(500).json({ ok: false, error: "No se pudo actualizar el usuario." });
   }
 });
 
 // Reset password
 r.patch("/usuarios/:id/password", requireAuth, requireAdmin, async (req, res) => {
-  try{
+  try {
     const { id } = req.params;
     const { password } = req.body;
-    if (!password) return res.status(400).json({ ok:false, error: "Falta password." });
+    if (!password) return res.status(400).json({ ok: false, error: "Falta password." });
 
     const hash = await bcrypt.hash(String(password), 10);
     const [u] = await pool.query(`UPDATE usuarios SET password_hash=? WHERE id=?`, [hash, id]);
-    if (u.affectedRows === 0) return res.status(404).json({ ok:false, error: "Usuario no encontrado." });
+    if (u.affectedRows === 0) return res.status(404).json({ ok: false, error: "Usuario no encontrado." });
 
-    res.json({ ok:true });
-  }catch(e){
+    res.json({ ok: true });
+  } catch (e) {
     console.error("PATCH /usuarios/:id/password error:", e);
-    res.status(500).json({ ok:false, error: "No se pudo actualizar la contraseña." });
+    res.status(500).json({ ok: false, error: "No se pudo actualizar la contraseña." });
   }
 });
 
 // Activar / Desactivar
 r.patch("/usuarios/:id/estado", requireAuth, requireAdmin, async (req, res) => {
-  try{
+  try {
     const { id } = req.params;
     const { activo } = req.body;
 
     if (Number(id) === Number(req.user?.id)) {
-      return res.status(400).json({ ok:false, error: "No puedes cambiar tu propio estado." });
+      return res.status(400).json({ ok: false, error: "No puedes cambiar tu propio estado." });
     }
 
-    const [u] = await pool.query(`UPDATE usuarios SET activo=? WHERE id=?`, [Number(activo)?1:0, id]);
-    if (u.affectedRows === 0) return res.status(404).json({ ok:false, error: "Usuario no encontrado." });
+    const [u] = await pool.query(`UPDATE usuarios SET activo=? WHERE id=?`, [Number(activo) ? 1 : 0, id]);
+    if (u.affectedRows === 0) return res.status(404).json({ ok: false, error: "Usuario no encontrado." });
 
-    res.json({ ok:true });
-  }catch(e){
+    res.json({ ok: true });
+  } catch (e) {
     console.error("PATCH /usuarios/:id/estado error:", e);
-    res.status(500).json({ ok:false, error: "No se pudo cambiar el estado." });
+    res.status(500).json({ ok: false, error: "No se pudo cambiar el estado." });
   }
 });
 
 // Eliminar usuario
 r.delete("/usuarios/:id", requireAuth, requireAdmin, async (req, res) => {
-  try{
+  try {
     const { id } = req.params;
 
     if (Number(id) === Number(req.user?.id)) {
-      return res.status(400).json({ ok:false, error: "No puedes eliminarte a ti mismo." });
+      return res.status(400).json({ ok: false, error: "No puedes eliminarte a ti mismo." });
     }
 
     const [del] = await pool.query(`DELETE FROM usuarios WHERE id=?`, [id]);
-    if (del.affectedRows === 0) return res.status(404).json({ ok:false, error: "Usuario no encontrado." });
+    if (del.affectedRows === 0) return res.status(404).json({ ok: false, error: "Usuario no encontrado." });
 
-    res.json({ ok:true });
-  }catch(e){
+    res.json({ ok: true });
+  } catch (e) {
     console.error("DELETE /usuarios/:id error:", e);
-    res.status(500).json({ ok:false, error: "No se pudo eliminar (revisar referencias)." });
+    res.status(500).json({ ok: false, error: "No se pudo eliminar (revisar referencias)." });
   }
 });
- 
+
 // Reporte de asistencias (admin)
- 
+
 r.get("/reportes/asistencias", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { desde, hasta, usuario } = req.query;
@@ -477,6 +507,7 @@ r.get("/reportes/asistencias", requireAuth, requireAdmin, async (req, res) => {
     `;
     const params = [f1, f2];
 
+    //busca un usuario por los nombres que escribio el usuario
     if (usuario && usuario.trim() !== "") {
       sql += " AND u.nombre LIKE CONCAT('%', ?, '%')";
       params.push(usuario.trim());
@@ -486,7 +517,7 @@ r.get("/reportes/asistencias", requireAuth, requireAdmin, async (req, res) => {
 
     const [rows] = await pool.query(sql, params);
 
-    // también buscamos los usuarios que NO marcaron asistencia en el rango
+    // también buscamos los usuarios que no marcaron asistencia en el rango
     const [usuarios] = await pool.query("SELECT id, nombre FROM usuarios WHERE rol_id != 1"); // suponiendo rol 1 = admin
 
     // verificamos quienes no aparecen en la tabla de asistencias
@@ -509,22 +540,22 @@ r.get("/reportes/asistencias", requireAuth, requireAdmin, async (req, res) => {
 r.get("/reportes/herramientas", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { mes, estado, categoria_id } = req.query;
-    
+
     // Construir el WHERE
     let where = [];
     let params = [];
-    
+
     if (estado && ESTADOS_VALIDOS.includes(estado)) {
       where.push("h.estado = ?");
       params.push(estado);
     }
-    
+
     if (categoria_id && Number(categoria_id) > 0) {
       where.push("h.categoria_id = ?");
       params.push(Number(categoria_id));
     }
-    
-    // SQL para obtener herramientas con estadísticas de uso
+
+    // SQL para obtener herramientas con estadisticas de uso
     const sql = `
       SELECT 
         h.id,
@@ -543,9 +574,9 @@ r.get("/reportes/herramientas", requireAuth, requireAdmin, async (req, res) => {
       GROUP BY h.id, h.nombre, h.codigo, h.estado, c.nombre
       ORDER BY h.nombre ASC
     `;
-    
+
     const [rows] = await pool.query(sql, params);
-    
+
     res.json({
       ok: true,
       data: rows
@@ -560,7 +591,7 @@ r.get("/reportes/herramientas", requireAuth, requireAdmin, async (req, res) => {
 r.get("/reportes/consolidado", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { periodo = "mensual", area = "" } = req.query;
-    
+
     // Datos consolidados del sistema
     const [[herramientas]] = await pool.query(`
       SELECT
@@ -572,7 +603,7 @@ r.get("/reportes/consolidado", requireAuth, requireAdmin, async (req, res) => {
         SUM(estado='BAJA') AS bajas
       FROM herramientas
     `);
-    
+
     const [[asistencias]] = await pool.query(`
       SELECT
         COUNT(DISTINCT usuario_id) AS usuarios_activos,
@@ -581,7 +612,7 @@ r.get("/reportes/consolidado", requireAuth, requireAdmin, async (req, res) => {
       FROM asistencias
       WHERE DATE(fecha) >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
     `);
-    
+
     const [[prestamos]] = await pool.query(`
       SELECT
         COUNT(DISTINCT p.id) AS prestamos_activos,
@@ -591,7 +622,8 @@ r.get("/reportes/consolidado", requireAuth, requireAdmin, async (req, res) => {
       LEFT JOIN prestamo_items pi ON pi.prestamo_id = p.id
       WHERE p.estado = 'ACTIVO'
     `);
-    
+
+    //crear un array con los datos del reporte
     const data = [
       { metrica: "Total de Herramientas", valor: herramientas?.total || 0, observacion: "Inventario completo" },
       { metrica: "Herramientas Disponibles", valor: herramientas?.disponibles || 0, observacion: "Listas para usar" },
@@ -603,7 +635,7 @@ r.get("/reportes/consolidado", requireAuth, requireAdmin, async (req, res) => {
       { metrica: "Préstamos Activos", valor: prestamos?.prestamos_activos || 0, observacion: "En curso" },
       { metrica: "Trabajadores con Préstamos", valor: prestamos?.trabajadores_con_prestamos || 0, observacion: "Con herramientas asignadas" }
     ];
-    
+
     res.json({
       ok: true,
       data: data,
