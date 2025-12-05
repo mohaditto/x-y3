@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
           return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
         }
 
-        // Cuando viene en ISO: yyyy-mm-ddThh:mm:ss
+        // Cuando viene en : yyyy-mm-ddThh:mm:ss
         if (fecha.includes("T")) {
           const [fechaSQL, horaSQL] = fecha.split("T");
           const [yyyy, mm, dd] = fechaSQL.split("-");
@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const resp = await fetch(`/api/capataz/historial/${user.id}`);
       const data = await resp.json();
-
+      // Verificar que la respuesta es un array
       if (!Array.isArray(data)) {
         console.error("Respuesta inesperada:", data);
         return;
@@ -62,20 +62,20 @@ document.addEventListener("DOMContentLoaded", () => {
     lista.forEach((r) => {
       const fila = document.createElement("tr");
 
-      // Asigna color según estado
+      // Asigna color segun estado
       let colorEstado = "";
       switch (r.estado) {
         case "ACTIVO":
-          colorEstado = "#e74c3c"; // rojo
+          colorEstado = "#e74c3c"; 
           break;
         case "CERRADO":
-          colorEstado = "#27ae60"; // verde
+          colorEstado = "#27ae60"; 
           break;
         case "PARCIAL":
-          colorEstado = "#f1c40f"; // amarillo
+          colorEstado = "#f1c40f"; 
           break;
         default:
-          colorEstado = "#95a5a6"; // gris
+          colorEstado = "#95a5a6"; 
       }
 
       fila.innerHTML = `
@@ -107,4 +107,5 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Cargar historial al iniciar
   cargarHistorial();
+
 });
