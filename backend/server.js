@@ -29,19 +29,21 @@ app.get("/", (_req, res) => {
 
 // Inicializar colección de clientes SSE y broadcaster
 app.locals.sseClients = [];
-app.locals.broadcast = function(event, data){
-  try{
+app.locals.broadcast = function (event, data) {
+  try {
     const payload = typeof data === 'string' ? data : JSON.stringify(data);
     (app.locals.sseClients || []).forEach(res => {
-      try{
+      try {
         res.write(`event: ${event}\n`);
         res.write(`data: ${payload}\n\n`);
-      }catch(e){ /* ignore */ }
+      } catch (e) { /* ignore */ }
     });
-  }catch(e){ console.error('Broadcast error', e); }
+  } catch (e) { console.error('Broadcast error', e); }
 };
 
-// Endpoint SSE para que clientes se suscriban
+// Endpoint SSE para que la comunicacion entre la pagina y el servidor sea en tiempo real 
+//permite al servidor enviar actualizaciones al cliente sin que este tenga que hacer peticiones repetidas
+
 app.get('/sse', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -49,8 +51,10 @@ app.get('/sse', (req, res) => {
   res.flushHeaders && res.flushHeaders();
   res.write(': connected\n\n');
 
+  // Añadir el cliente a la lista de clientes SSE
   app.locals.sseClients.push(res);
 
+  //cierrar conexion y eliminar cliente de la lista cuando se cierra la conexion
   req.on('close', () => {
     app.locals.sseClients = (app.locals.sseClients || []).filter(r => r !== res);
   });
