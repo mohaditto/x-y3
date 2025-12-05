@@ -12,7 +12,7 @@ router.post("/asistencia", async (req, res) => {
     if (!fecha || !hora_entrada || !usuario_id) {
       return res.status(400).json({ message: "Faltan datos obligatorios" });
     }
-
+    // Extraer solo la hora hh:mm:ss
     const horaSolo = hora_entrada.split("T")[1]?.slice(0, 8);
     const fechaSQL = fecha;
 
@@ -32,7 +32,7 @@ router.post("/asistencia", async (req, res) => {
       "INSERT INTO asistencias (usuario_id, fecha, hora_entrada, estado, turno_id) VALUES (?, ?, ?, 'PRESENTE', 1)",
       [usuario_id, fechaSQL, horaSolo]
     );
-
+    // Devolver datos de la asistencia registrada
     res.json({
       id: result.insertId,
       fecha: fechaSQL,
@@ -55,13 +55,14 @@ router.put("/asistencia/salida/:usuario_id", async (req, res) => {
       "SELECT id FROM asistencias WHERE usuario_id = ? AND fecha = ?",
       [usuario_id, hoy]
     );
-
+    //si asistencia es vacio , no se encontro registro de entrada
     if (asistencia.length === 0) {
       return res
         .status(404)
         .json({ message: "No se encontró asistencia del día para registrar salida." });
     }
 
+    //actualiza registro con hora como presente
     const id = asistencia[0].id;
     await pool.query(
       "UPDATE asistencias SET hora_salida = ?, estado = 'PRESENTE' WHERE id = ?",
@@ -94,6 +95,44 @@ router.get("/asistencias/:usuario_id", async (req, res) => {
   } catch (error) {
     console.error(" Error al obtener asistencias:", error);
     res.status(500).json({ message: "Error al obtener asistencias" });
+  }
+});
+
+// Obtener herramientas asignadas al trabajador
+router.get("/mis-herramientas/:usuario_id", async (req, res) => {
+  try {
+    const { usuario_id } = req.params;
+
+    const [rows] = await pool.query(
+      `
+      SELECT 
+          h.id AS herramienta_id,
+          h.nombre AS herramienta,
+          h.codigo AS codigo,
+          h.estado AS estado_herramienta,
+          p.id AS prestamo_id,
+          p.fecha_salida,
+          u_cap.nombre AS entregado_por
+      FROM prestamo_items i
+      JOIN prestamos p ON p.id = i.prestamo_id
+      JOIN herramientas h ON h.id = i.herramienta_id
+      JOIN usuarios u_cap ON u_cap.id = p.capataz_id
+      WHERE p.trabajador_id = ?
+        AND (
+              p.estado IN ('ACTIVO','PARCIAL')
+              OR i.estado_devolucion = 'PENDIENTE'
+            )
+        AND i.hora_entrada IS NULL
+      ORDER BY p.fecha_salida DESC;
+      `,
+      [usuario_id]
+    );
+
+    res.json(rows);
+
+  } catch (error) {
+    console.error("Error al obtener herramientas asignadas:", error);
+    res.status(500).json({ message: "Error al obtener herramientas asignadas" });
   }
 });
 
