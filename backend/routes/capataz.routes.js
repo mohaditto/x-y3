@@ -53,10 +53,13 @@ router.post("/asistencia", async (req, res) => {
 // Registrar SALIDA
 router.put("/asistencia/salida/:usuario_id", async (req, res) => {
   try {
+    //obtener la asistencia del dia para el usuario
     const { usuario_id } = req.params;
+    //obtener la fecha de hoy , slice para obtener yyyy-mm-dd
     const hoy = new Date().toISOString().slice(0, 10);
     const horaSalida = new Date().toTimeString().slice(0, 8);
 
+    //verificar que exista la asistencia del dia
     const [asistencia] = await pool.query(
       "SELECT id FROM asistencias WHERE usuario_id = ? AND fecha = ?",
       [usuario_id, hoy]
@@ -66,6 +69,7 @@ router.put("/asistencia/salida/:usuario_id", async (req, res) => {
       return res.status(404).json({ message: "No se encontró asistencia del día para registrar salida." });
     }
 
+    //actualizar la asistencia con la hora de salida
     const id = asistencia[0].id;
     await pool.query(
       "UPDATE asistencias SET hora_salida = ?, estado = 'PRESENTE' WHERE id = ?",
@@ -87,6 +91,7 @@ router.get("/asistencias/:usuario_id", async (req, res) => {
   try {
     const { usuario_id } = req.params;
 
+    //segun las filas , obtener las asistencias del usuario
     const [rows] = await pool.query(
       "SELECT id, fecha, hora_entrada, hora_salida FROM asistencias WHERE usuario_id = ? ORDER BY fecha DESC, hora_entrada ASC",
       [usuario_id]
@@ -101,11 +106,10 @@ router.get("/asistencias/:usuario_id", async (req, res) => {
 
 
 // GESTIÓN DE HERRAMIENTAS
-
-
 // Obtener todas las herramientas disponibles
 router.get("/herramientas", async (req, res) => {
   try {
+    // buscar por nombre o descripción
     const buscar = req.query.buscar || "";
 
     const [rows] = await pool.query(
@@ -129,6 +133,7 @@ router.put("/herramientas/usar/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
+    //actualizar estado a no disponible 
     await pool.query(
       "UPDATE herramientas SET estado = 'NO_DISPONIBLE' WHERE id = ?",
       [id]
@@ -149,11 +154,12 @@ router.put("/herramientas/devolver/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
+    //actualizar estado a disponible 
     await pool.query(
       "UPDATE herramientas SET estado = 'DISPONIBLE' WHERE id = ?",
       [id]
     );
-
+    //emitir actualizacion atravez de sse
   try{ const b = req.app.locals.broadcast; if(b) b('herramienta:estado', { id: Number(id), estado: 'DISPONIBLE' }); }catch(_){ }
 
     res.json({ message: "Herramienta devuelta correctamente" });
@@ -166,6 +172,7 @@ router.put("/herramientas/devolver/:id", async (req, res) => {
 // Cambiar estado de herramienta
 router.put("/herramientas/estado/:id", async (req, res) => {
   try {
+    //obtiene id y estado para cambiar estado
     const { id } = req.params;
     const { estado } = req.body;
 
@@ -202,15 +209,14 @@ router.put("/herramientas/estado/:id", async (req, res) => {
 
 
 //  ASOCIAR HERRAMIENTAS A UN TRABAJADOR (PRÉSTAMOS)
-
-
-// Crear un préstamo (capataz asigna herramientas a trabajador)
+// Crear un prestamo (capataz asigna herramientas a trabajador)
 router.post("/herramientas/prestar", async (req, res) => {
   try {
+    // tomar datos del body
     const { capataz_id, trabajador_id, herramientas } = req.body;
 
     if (!capataz_id || !trabajador_id || !herramientas || herramientas.length === 0) {
-      return res.status(400).json({ message: "Datos incompletos para crear préstamo" });
+      return res.status(400).json({ message: "Datos incompletos para crear prestamos" });
     }
 
     // Validar que ninguna herramienta esté dañada
@@ -218,7 +224,7 @@ router.post("/herramientas/prestar", async (req, res) => {
       "SELECT id, nombre, estado FROM herramientas WHERE id IN (?) AND estado IN ('DAÑADA', 'BAJA')",
       [herramientas]
     );
-
+    //si hay herramientas dañadas , devolver error
     if (herramientasCheck.length > 0) {
       const herramientasDanadas = herramientasCheck.map(h => `${h.nombre} (${h.estado})`).join(", ");
       return res.status(400).json({ 
@@ -227,12 +233,13 @@ router.post("/herramientas/prestar", async (req, res) => {
       });
     }
 
-    // Registrar préstamo con fecha actual en el backend
+    // Registrar prestamo con fecha actual en el backend
     const [prestamoResult] = await pool.query(
       "INSERT INTO prestamos (capataz_id, trabajador_id, fecha_entrada, estado) VALUES (?, ?, NOW(), 'ACTIVO')",
       [capataz_id, trabajador_id]
     );
 
+    //obtener id del prestamo ya hecho
     const prestamo_id = prestamoResult.insertId;
 
     // Asociar herramientas — insertar explicitamente estado_devolucion='PENDIENTE' y hora_entrada=NULL
@@ -250,7 +257,7 @@ router.post("/herramientas/prestar", async (req, res) => {
       // Emitir evento por cada herramienta prestada
       try{ const b = req.app.locals.broadcast; if(b) b('herramienta:estado', { id: Number(herramienta_id), estado: 'NO_DISPONIBLE' }); }catch(_){ }
     }
-
+    //crea evento sse de nuevo prestamo creado
   try{ const b = req.app.locals.broadcast; if(b) b('prestamo:created', { prestamo_id, capataz_id, trabajador_id }); }catch(_){ }
 
     res.json({ message: "Préstamo creado correctamente", prestamo_id });
@@ -258,6 +265,7 @@ router.post("/herramientas/prestar", async (req, res) => {
     console.error("Error al crear préstamo:", error);
     res.status(500).json({ message: "Error al registrar préstamo" });
   }
+  
 });
 
 
@@ -265,19 +273,20 @@ router.post("/herramientas/prestar", async (req, res) => {
 router.put("/herramientas/devolver-prestamo/:herramienta_id", async (req, res) => {
   try {
     const { herramienta_id } = req.params;
-
+    
+    // Actualizar prestamo_items para marcar como devuelta
     await pool.query(
       `UPDATE prestamo_items 
        SET hora_entrada = NOW(), estado_devolucion = 'OK' 
        WHERE herramienta_id = ? AND estado_devolucion = 'PENDIENTE'`,
       [herramienta_id]
     );
-
+    // Marcar herramienta como DISPONIBLE
     await pool.query(
       "UPDATE herramientas SET estado = 'DISPONIBLE' WHERE id = ?",
       [herramienta_id]
     );
-
+    //emite evento para el estado de la herrramienta , manda id y estado DISPONIBLE
   try{ const b = req.app.locals.broadcast; if(b) b('herramienta:estado', { id: Number(herramienta_id), estado: 'DISPONIBLE' }); }catch(_){ }
 
     res.json({ message: "Herramienta devuelta correctamente y disponible" });
@@ -297,11 +306,12 @@ router.get("/usuarios", async (req, res) => {
     let query = "SELECT id, nombre, email, rol_id FROM usuarios WHERE activo = 1";
     const params = [];
 
+    //si hay un rol , agregar a la consulta
     if (rol) {
       query += " AND rol_id = ?";
       params.push(rol);
     }
-
+    //ejecutar consulta
     const [rows] = await pool.query(query, params);
     res.json(rows);
   } catch (error) {
@@ -322,7 +332,7 @@ router.get("/trabajadores", async (req, res) => {
     res.status(500).json({ message: "Error al obtener trabajadores" });
   }
 });
-// Obtener historial de préstamos del capataz
+// Obtener historial de prestamos del capataz
 router.get("/historial/:capataz_id", async (req, res) => {
   try {
     const { capataz_id } = req.params;
@@ -355,16 +365,18 @@ router.put("/herramientas/devolver", async (req, res) => {
   try {
     const { herramientas } = req.body; // Array de objetos: { prestamo_id, herramienta_id }
 
+    //validar que se envien herramientas
     if (!herramientas || herramientas.length === 0) {
       return res.status(400).json({ message: "No se enviaron herramientas a devolver." });
     }
 
+    // por cont h en herramientas , actualizar cada una
     for (const h of herramientas) {
       await pool.query(
         "UPDATE prestamo_items SET hora_entrada = NOW() WHERE prestamo_id = ? AND herramienta_id = ?",
         [h.prestamo_id, h.herramienta_id]
       );
-      // Marcar la herramienta como DISPONIBLE también
+      // Marcar la herramienta como DISPONIBLE tambien
       await pool.query(
         "UPDATE herramientas SET estado = 'DISPONIBLE' WHERE id = ?",
         [h.herramienta_id]
@@ -373,7 +385,7 @@ router.put("/herramientas/devolver", async (req, res) => {
       try{ const b = req.app.locals.broadcast; if(b) b('herramienta:estado', { id: Number(h.herramienta_id), estado: 'DISPONIBLE' }); }catch(_){ }
     }
 
-    // Para cada préstamo afectado, comprobar si ya no quedan items pendientes; si no quedan, cerrar el préstamo
+    // Para cada prestamo afectado, comprobar si ya no quedan items pendientes; si no quedan, cerrar el préstamo
     try {
       const prestamoIds = [...new Set(herramientas.map(h => Number(h.prestamo_id)))];
       for (const pid of prestamoIds) {
@@ -381,12 +393,14 @@ router.put("/herramientas/devolver", async (req, res) => {
           "SELECT COUNT(*) AS pendientes FROM prestamo_items WHERE prestamo_id = ? AND hora_entrada IS NULL",
           [pid]
         );
+        // marcar prestamo como cerrado si no hay pendientes
         const pendientes = pendientesRow ? pendientesRow.pendientes || pendientesRow.PENDIENTES || 0 : 0;
         if (Number(pendientes) === 0) {
           await pool.query(
             "UPDATE prestamos SET estado = 'CERRADO', fecha_salida = NOW() WHERE id = ?",
             [pid]
           );
+          // Emitir evento SSE de prestamo cerrado
           try{ const b = req.app.locals.broadcast; if(b) b('prestamo:closed', { prestamo_id: pid }); }catch(_){ }
         }
       }
@@ -416,6 +430,7 @@ router.get("/prestadas", async (req, res) => {
       WHERE hora_entrada IS NULL
     `);
 
+    // log para depuracion en caso de error
     console.log(`/api/capataz/prestadas -> ${rows.length} rows`);
     res.json(rows);
 
