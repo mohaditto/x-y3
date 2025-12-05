@@ -1,7 +1,6 @@
-// backend/middleware/auth.js
 import jwt from "jsonwebtoken";
 
-// ✅ Middleware para verificar si el usuario está autenticado
+// verifica si el usuario esta autenticado
 export function requireAuth(req, res, next) {
   try {
     const header = req.headers.authorization || "";
@@ -10,17 +9,17 @@ export function requireAuth(req, res, next) {
     if (!token) {
       return res.status(401).json({ error: "Token requerido" });
     }
-
+    // verifica y decodifica el token para obtener el payload
     const payload = jwt.verify(token, process.env.JWT_SECRET || "dev");
     req.user = payload; // { id, nombre, email, rol }
     next();
   } catch (error) {
-    console.error("❌ Error en requireAuth:", error);
+    console.error(" Error en requireAuth:", error);
     return res.status(401).json({ error: "Token inválido o expirado" });
   }
 }
 
-// ✅ Middleware para restringir acceso solo a administradores
+// verifica si el usuario es admin
 export function requireAdmin(req, res, next) {
   try {
     if (req.user?.rol === "admin") {
@@ -29,7 +28,7 @@ export function requireAdmin(req, res, next) {
       return res.status(403).json({ error: "Solo administradores" });
     }
   } catch (error) {
-    console.error("❌ Error en requireAdmin:", error);
+    console.error(" Error en requireAdmin:", error);
     return res.status(500).json({ error: "Error interno en autorización" });
   }
 }
